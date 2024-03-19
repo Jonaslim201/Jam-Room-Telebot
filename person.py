@@ -14,6 +14,7 @@ class Person():
         self.date = ""
         self.start_time = "0000"
         self.end_time = "0000"
+        self.cell_range = ""
         self.hours_booked = hours_booked
 
         self.in_db = False
@@ -95,8 +96,8 @@ class Person():
                 return False
             #Splitting string on the "-"
             else:
-                self.start_time = message.text.split('-')[0]
-                self.end_time = message.text.split("-")[1]
+                self.start_time = message.text.split('-')[0].strip()
+                self.end_time = message.text.split("-")[1].strip()
                 if len(self.start_time) != 4 or len(self.end_time) != 4:
                     print("returned False from check_time else part")
                     return False
@@ -156,8 +157,12 @@ class Person():
         
         result = google_sheets.check_slot(self.date, self.start_time, self.end_time, self.name)
 
-        if result[0] == True:
+        if result[2] == True:
+            self.slot_available = False
+            return ("Event", result[1])
+        elif result[0] == True:
             self.slot_available = True
-            return None
+            self.cell_range = result[1]
+            return (None, None)
         elif result[0] == False:
-            return result[1]
+            return (None, result[1])

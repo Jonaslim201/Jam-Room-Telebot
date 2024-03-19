@@ -68,6 +68,7 @@ def push_data(person):
             "week_numbers_booked": {
                 week_number: {
                     "dates_booked": [person.date],
+                    "cell_range": person.cell_range,
                     "number_of_hours_booked": person.hours_booked
                 }
             }
@@ -82,12 +83,14 @@ def push_data(person):
             curr_ref.update(
                 {
                     f"week_numbers_booked.{week_number}.dates_booked": firestore.ArrayUnion([person.date]),
+                    f"week_numbers_booked.{week_number}.cell_range": firestore.ArrayUnion(person.cell_range),
                     f"week_numbers_booked.{week_number}.number_of_hours_booked": firestore.Increment(person.hours_booked)
                 }
             )
         else:
             curr_ref.update({
                 f"week_numbers_booked.{week_number}.dates_booked": [person.date],
+                f"week_numbers_booked.{week_number}.cell_range": person.cell_range,
                 f"week_numbers_booked.{week_number}.number_of_hours_booked": person.hours_booked
             })
 

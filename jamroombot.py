@@ -1,6 +1,8 @@
 import base64
 import telebot
-import datetime
+from datetime import date
+from datetime import timedelta
+from dateutil.relativedelta import relativedelta
 import sys
 import os
 from dotenv import load_dotenv
@@ -35,7 +37,7 @@ def send_welcome(message):
     db[message.chat.id] = Person(chat_id = message.chat.id, username = message.from_user.username, hours_booked = checked_person[2])
 
     if checked_person[2] == False:
-        bot.edit_message_text("Hello! Welcome to the Jam Room booking bot to make the secretary's job even easier! Please remember the following:\n\n1. Each band has a maximum of 4 hours of booking per week.", 
+        bot.edit_message_text("Hello! Welcome to the Jam Room booking bot to make the secretary's job even easier! Please remember the following:\n\n1. Each band has a maximum of 4 hours of booking per week.\n\n2. Please do not litter, throw all your trash when leaving the room.\n\n3. For any booking related queries such as cancelling your slot, please approach the secretary.", 
                             db[message.chat.id].chat_id, 
                             loading_message.message_id)
         
@@ -47,7 +49,7 @@ def send_welcome(message):
         db[message.chat.id].name_given = True
         db[message.chat.id].name = checked_person[1]
         print("name in person object", db[message.chat.id].name)
-        bot.edit_message_text(f"Welcome back {db[message.chat.id].name}! Please remember the following:\n\n1. Each band has a maximum of 4 hours of booking per week.", 
+        bot.edit_message_text(f"Welcome back {db[message.chat.id].name}! Please remember the following:\n\n1. Each band has a maximum of 4 hours of booking per week.\n\n2. Please do not litter, throw all your trash when leaving the room.\n\n3. For any booking related queries such as cancelling your slot, please approach the secretary.", 
                                 db[message.chat.id].chat_id, 
                                 loading_message.message_id)
         
@@ -99,9 +101,8 @@ def check_id(message):
         bot.send_message(db[message.chat.id].chat_id, "Please enter valid input.")
 
 
-
 def activate_calendar(message):
-    calendar, step = DetailedTelegramCalendar(min_date=datetime.date.today(), max_date=datetime.date.today()+datetime.timedelta(weeks=8)).build()
+    calendar, step = DetailedTelegramCalendar(min_date=date.today(), max_date=date.today()+timedelta(weeks=8)).build()
     bot.send_message(db[message.chat.id].chat_id,
                     f"Select {LSTEP[step]}",
                     reply_markup=calendar)
@@ -111,6 +112,7 @@ def activate_calendar(message):
 @bot.callback_query_handler(func=DetailedTelegramCalendar.func())
 def cal(c):
     result, key, step = DetailedTelegramCalendar().process(c.data)
+    date_today = date.today()
     if not result and key:
         bot.edit_message_text(f"Select {LSTEP[step]}",
                               db[c.from_user.id].chat_id,
@@ -118,8 +120,10 @@ def cal(c):
                               reply_markup=key)
     elif result:
         print(type(result))
-        if result < datetime.date.today():
+        if result < date_today:
             bot.edit_message_text("u cant book a timeslot from the past dumbass. Now u gotta use /book to book again, look at what you have done.", db[c.from_user.id].chat_id, c.message.message_id)
+        elif result > date_today + relativedelta(months = +2):
+            bot.edit_message_text("You are only able to book a slot 2 months in advance.", db[c.from_user.id].chat_id, c.message.message_id)
         else:
             db[c.from_user.id].date_chosen = True
             db[c.from_user.id].date = result
@@ -165,18 +169,18 @@ def checking_slot(chat_id):
         
         print(db[chat_id].start_time)
         print(db[chat_id].end_time)
-        bot.send_message(db[chat_id].chat_id, "Checking if the slot is available")
+        bot.send_message(db[chat_id].chat_id, "Checking availability and booking your slot. Please do not cancel.")
         result = db[chat_id].check_slot()
+
+        if result[0] == "Event":
+            bot.send_message(db[chat_id].chat_id, f"There appears to be an event from {result[1][0]} to {result[1][1]}. Please check against the sheet for the timeslot.\n\nTo restart the booking, use /book.")
         
-        if db[chat_id].slot_available:
-            bot.send_message(db[chat_id].chat_id, "Your slot is available.")
-            
-        else:
+        elif result[0] == None and not db[chat_id].slot_available:
             reply = ""
             for timeslot in result:
                 reply += timeslot + "\n"
             bot.send_message(db[chat_id].chat_id, "Your slot is not available as the following slots are booked: \n" + reply 
-                             + "Please refer to the spreadsheet /sheet to check for available slots.")
+                             + "\nPlease refer to the spreadsheet /sheet to check for available slots.")
             
             bot.send_message(db[chat_id].chat_id, "Please press /book to restart your booking.")
 
@@ -208,6 +212,5 @@ def jam_room_guide(message):
     bot.reply_to(message, "To be updated")
 
 
-print("updated")
 print("Bot has started")
 bot.infinity_polling()
