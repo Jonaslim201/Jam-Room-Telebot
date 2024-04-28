@@ -3,14 +3,10 @@ import telebot
 from datetime import date
 from datetime import timedelta
 from dateutil.relativedelta import relativedelta
-import sys
 import os
 from dotenv import load_dotenv
 
-laptop_path = "C:/Users/jonas/Downloads/Telebot (1)/Telebot/functions"
-desktop_path = 'C:/Telebot/functions'
-sys.path.insert(1, desktop_path)
-import firestore
+from functions import firestore
 from person import Person
 from telebot import *
 from telegram_bot_calendar import DetailedTelegramCalendar, LSTEP
@@ -21,7 +17,6 @@ bot = telebot.TeleBot(API_TOKEN, parse_mode=None)
 firestore_db = firestore.users_ref
 print("Got db from firestore")
 db = {}
-
 
 @bot.message_handler(commands=['cancel'], func = lambda message: message.chat.id in db)
 def cancel(message):
@@ -177,7 +172,7 @@ def checking_slot(chat_id):
         
         elif result[0] == None and not db[chat_id].slot_available:
             reply = ""
-            for timeslot in result:
+            for timeslot in result[1]:
                 reply += timeslot + "\n"
             bot.send_message(db[chat_id].chat_id, "Your slot is not available as the following slots are booked: \n" + reply 
                              + "\nPlease refer to the spreadsheet /sheet to check for available slots.")
@@ -197,6 +192,8 @@ def finish(chat_id):
         bot.send_message(chat_id, "Your slot has been booked. For any issues please pm the current Secretary.")
     else:
         db[chat_id].reset()
+    
+    bot.stop_polling()
      
 
 @bot.message_handler(commands=['help'])

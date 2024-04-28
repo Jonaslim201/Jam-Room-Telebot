@@ -1,6 +1,3 @@
-# Welcome to Cloud Functions for Firebase for Python!
-# To get started, simply uncomment the below code or create your own.
-# Deploy with `firebase deploy`
 import datetime
 import os
 from dotenv import load_dotenv
@@ -12,6 +9,7 @@ from firebase_admin import firestore
 
 load_dotenv()
 cred = credentials.Certificate(os.getenv("desktop_path"))
+
 
 firebase_admin.initialize_app(cred, {
     'databaseURL': os.getenv("DATABASE_URL")

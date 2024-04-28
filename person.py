@@ -1,7 +1,6 @@
 import datetime
-import sys
-sys.path.insert(1, 'C:/Telebot/functions')
-import google_sheets
+
+from functions import google_sheets
 
 class Person():
     def __init__(self, chat_id, username = None, hours_booked = 0):
@@ -46,14 +45,16 @@ class Person():
                 #Checking if split values are indeed in 24h format, return False if not
                 self.start_time = datetime.datetime.strptime(self.start_time, '%H%M')
                 self.end_time = datetime.datetime.strptime(self.end_time, '%H%M')
-                if (self.start_time > self.end_time) or (self.start_time < datetime.datetime.strptime("0900", '%H%M')) or (self.end_time > datetime.datetime.strptime("2300", '%H%M')):
-                    correct_input = False
+                # if (self.start_time > self.end_time) or (self.start_time < datetime.datetime.strptime("0900", '%H%M')) or (self.end_time > datetime.datetime.strptime("2300", '%H%M')):
+                #     correct_input = False
             
                 time_diff = self.end_time - self.start_time
                 if time_diff.seconds/3600 > 4:
                     booking_exceeded = True
                     correct_input = False
                     return(booking_exceeded, correct_input)
+                elif time_diff.seconds == 0:
+                    correct_input = False
                 else:
                     total_hours = curr_booking_hours + time_diff.seconds/3600
                     print("Total hours ", total_hours)
@@ -62,18 +63,19 @@ class Person():
                     if total_hours > 4:
                         booking_exceeded = True
                         correct_input = False
-                        return(booking_exceeded, correct_input)
                     else:
                         self.hours_booked = time_diff.seconds/3600
                         print(self.hours_booked)
+                        
+                    return(booking_exceeded, correct_input)
 
                 #Checking for valid minute values
-                if not self.check_00_30(self.start_time) or not self.check_00_30(self.end_time):
-                    print("returned False from inner check_00_30")
-                    correct_input = False
-                else:
-                    print("correct input is True")
-                    break
+                # if not self.check_00_30(self.start_time) or not self.check_00_30(self.end_time):
+                #     print("returned False from inner check_00_30")
+                #     correct_input = False
+                # else:
+                #     print("correct input is True")
+                #     break
         
         except ValueError as ve1:
             print('ValueError 1:', ve1)
@@ -98,7 +100,7 @@ class Person():
             else:
                 self.start_time = message.text.split('-')[0].strip()
                 self.end_time = message.text.split("-")[1].strip()
-                if len(self.start_time) != 4 or len(self.end_time) != 4:
+                if self.start_time not in google_sheets.get_times() or self.end_time not in google_sheets.get_times():
                     print("returned False from check_time else part")
                     return False
                 print("returned True from check_time")
@@ -140,8 +142,6 @@ class Person():
         return correct_input
     
     def reset(self):
-        
-
         self.date_chosen = False
         self.name_given = False
         self.id_given = False
@@ -160,9 +160,11 @@ class Person():
         if result[2] == True:
             self.slot_available = False
             return ("Event", result[1])
+        
         elif result[0] == True:
             self.slot_available = True
             self.cell_range = result[1]
             return (None, None)
+        
         elif result[0] == False:
             return (None, result[1])

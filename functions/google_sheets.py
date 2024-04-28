@@ -43,15 +43,15 @@ for i in range(29):
     row_names[x] = str(i + 4)
     minutes += 30
 
+print(row_names)
+
 for i in range(26):
   letters[i] = chr(i+65)
   
-
+def get_times():
+  return row_names
 
 def main():
-  """Shows basic usage of the Sheets API.
-  Prints values from a sample spreadsheet.
-  """
   global values
   global sheet
 
@@ -96,7 +96,7 @@ def check_slot(date, start_time, end_time, name):
     diff = date - datetime.datetime.strptime(values[1], "%m/%d/%Y")
     index = diff.days + 1
 
-  letter_index = fuck_this_function(index)
+  letter_index = get_col_names(index)
   cell_range = "'Jam Room Bookings'!"+ letter_index + row_names[start_time] + ":" + letter_index + str((int(row_names[end_time]) - 1))
 
   cell_rows = []
@@ -104,6 +104,29 @@ def check_slot(date, start_time, end_time, name):
     cell_rows.append(i)
 
   req_cells = sheet.get(spreadsheetId = SPREADSHEET_ID, ranges = [cell_range], includeGridData = True).execute()
+  merged_slots = find_merged_slots(req_cells)
+
+  if (merged_slots[0] == False):
+    return merged_slots
+
+  else:
+    for cell in req_cells['sheets'][0]['data'][0]['rowData']:
+        rgb.append(cell['values'][0]['effectiveFormat']['backgroundColor'])
+    
+    found_booked_cells = find_booked_cells(rgb)
+
+    if all(v is None for v in found_booked_cells):
+      book_slot(cell_range, name, index, start_time, end_time)
+      return (True, [cell_range.split("!")[1]], False)
+    
+    else:
+      booked_timeslots = find_booked_timeslots(found_booked_cells, cell_rows)
+      print(booked_timeslots)
+      exact_slots = find_exact_slots(booked_timeslots)
+
+      return (False, exact_slots, False)
+
+def find_merged_slots(req_cells):
   try:
     merged_cells = req_cells['sheets'][0]['merges'][0]
     start_row_index = merged_cells['startRowIndex'] + 1
@@ -122,28 +145,9 @@ def check_slot(date, start_time, end_time, name):
     
     return (False, [start_row_index, end_row_index], True)
 
-
   except KeyError:
-    print("Returned key error from google_sheets.check_slots")
-
-
-  for cell in req_cells['sheets'][0]['data'][0]['rowData']:
-      rgb.append(cell['values'][0]['effectiveFormat']['backgroundColor'])
-  
-  found_booked_cells = find_booked_cells(rgb)
-
-  if all(v is None for v in found_booked_cells):
-    book_slot(cell_range, name, index, start_time, end_time)
-    return (True, [cell_range.split("!")[1]], False)
-  
-  else:
-    booked_timeslots = find_booked_timeslots(found_booked_cells, cell_rows)
-    print(booked_timeslots)
-    exact_slots = find_exact_slots(booked_timeslots)
-
-    return (False, exact_slots, False)
-
-
+    print("No merged slots found. Returned key error from google_sheets.check_slots")
+    return (True, True, True)
 
 def find_booked_cells(rgb):
   arr = []
@@ -255,7 +259,7 @@ def book_slot(cell_range, name, index, start_time, end_time):
   print("start column: ", index, "\nend column", index + 1, "\nstart row", int(row_names[start_time]) - 1, "\nend row", int(row_names[end_time])-1)
   print("cell updated at", first_cell)
 
-def fuck_this_function(index):
+def get_col_names(index):
   global letters
 
   remainder = index%26
